@@ -1,11 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
@@ -30,10 +24,7 @@ import {
   Shield,
   Zap,
   Code,
-  RefreshCw,
 } from "lucide-react";
-
-// --- Types ---
 
 interface Finding {
   _id: string;
@@ -69,8 +60,6 @@ interface Review {
   createdAt: number;
   findings?: Finding[];
 }
-
-// --- Simulated review engine ---
 
 const SAMPLE_FINDINGS: Omit<Finding, "_id" | "reviewId">[] = [
   {
@@ -163,68 +152,43 @@ const SAMPLE_FINDINGS: Omit<Finding, "_id" | "reviewId">[] = [
   },
 ];
 
+type ReviewStatus = "pending" | "analyzing" | "reasoning" | "auditing" | "completed" | "failed";
+
 async function runSimulatedReview(
   createReview: (args: { repoUrl: string }) => Promise<Id<"reviews">>,
-  updateStatus: (args: { reviewId: Id<"reviews">; status: "pending" | "analyzing" | "reasoning" | "auditing" | "completed" | "failed" }) => void,
+  updateStatus: (args: { reviewId: Id<"reviews">; status: ReviewStatus }) => void,
   completeReview: (args: {
     reviewId: Id<"reviews">;
-    executionMetadata: {
-      tokensConsumed: number;
-      latencyMs: number;
-      agentsInvoked: string[];
-      cacheHit: boolean;
-    };
-    reviewSummary: {
-      status: "APPROVED" | "CHANGES_REQUESTED" | "CRITICAL_BLOCKER";
-      confidenceScore: number;
-    };
-    deterministicMetrics: {
-      cyclomaticComplexityDelta: number;
-      testCoverageImpact: string;
-    };
+    executionMetadata: { tokensConsumed: number; latencyMs: number; agentsInvoked: string[]; cacheHit: boolean };
+    reviewSummary: { status: "APPROVED" | "CHANGES_REQUESTED" | "CRITICAL_BLOCKER"; confidenceScore: number };
+    deterministicMetrics: { cyclomaticComplexityDelta: number; testCoverageImpact: string };
   }) => void,
   addFinding: (args: {
-    reviewId: Id<"reviews">;
-    findingId: string;
-    severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-    filePath: string;
-    lineNumber: number;
-    category: "SECURITY" | "PERFORMANCE" | "LOGIC" | "STYLE";
-    description: string;
-    suggestedFix: string;
+    reviewId: Id<"reviews">; findingId: string; severity: Finding["severity"];
+    filePath: string; lineNumber: number; category: Finding["category"];
+    description: string; suggestedFix: string;
   }) => void,
   repoUrl: string,
-  onStatusChange?: (status: "pending" | "analyzing" | "reasoning" | "auditing" | "completed" | "failed") => void,
+  onStatusChange?: (status: ReviewStatus) => void,
 ): Promise<Id<"reviews">> {
   const reviewId = await createReview({ repoUrl });
   onStatusChange?.("analyzing");
   updateStatus({ reviewId, status: "analyzing" });
   await delay(1800);
-
   onStatusChange?.("reasoning");
   updateStatus({ reviewId, status: "reasoning" });
   await delay(2200);
-
   onStatusChange?.("auditing");
   updateStatus({ reviewId, status: "auditing" });
   await delay(1600);
-
-  // Add findings
   for (const f of SAMPLE_FINDINGS) {
     addFinding({ reviewId, ...f });
     await delay(120);
   }
-
   const hasCritical = SAMPLE_FINDINGS.some((f) => f.severity === "CRITICAL");
   const highCount = SAMPLE_FINDINGS.filter((f) => f.severity === "HIGH").length;
-
-  const summaryStatus = hasCritical
-    ? "CRITICAL_BLOCKER"
-    : highCount >= 2
-      ? "CHANGES_REQUESTED"
-      : "APPROVED";
+  const summaryStatus = hasCritical ? "CRITICAL_BLOCKER" : highCount >= 2 ? "CHANGES_REQUESTED" : "APPROVED";
   const confidence = hasCritical ? 0.94 : highCount >= 2 ? 0.87 : 0.96;
-
   completeReview({
     reviewId,
     executionMetadata: {
@@ -233,17 +197,12 @@ async function runSimulatedReview(
       agentsInvoked: ["Code_Analyzer", "Logic_Reasoner", "Security_Auditor"],
       cacheHit: false,
     },
-    reviewSummary: {
-      status: summaryStatus,
-      confidenceScore: confidence,
-    },
+    reviewSummary: { status: summaryStatus, confidenceScore: confidence },
     deterministicMetrics: {
       cyclomaticComplexityDelta: 3,
-      testCoverageImpact:
-        "2 files lack test coverage (src/workers/processor.ts, src/api/webhooks.ts)",
+      testCoverageImpact: "2 files lack test coverage (src/workers/processor.ts, src/api/webhooks.ts)",
     },
   });
-
   onStatusChange?.("completed");
   return reviewId;
 }
@@ -251,8 +210,6 @@ async function runSimulatedReview(
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-// --- Sub-components ---
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { icon: typeof CheckCircle2; color: string; bg: string }> = {
@@ -262,7 +219,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const c = config[status] ?? config.APPROVED;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${c.bg} ${c.color}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-semibold ${c.bg} ${c.color}`}>
       <c.icon className="size-3.5" />
       {status.replace(/_/g, " ")}
     </span>
@@ -277,19 +234,14 @@ function SeverityBadge({ severity }: { severity: string }) {
     LOW: "bg-gray-100 text-gray-600 border-gray-200",
   };
   return (
-    <span className={`rounded border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${colors[severity] ?? colors.LOW}`}>
+    <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${colors[severity] ?? colors.LOW}`}>
       {severity}
     </span>
   );
 }
 
 function CategoryBadge({ category }: { category: string }) {
-  const icons: Record<string, typeof Shield> = {
-    SECURITY: Shield,
-    PERFORMANCE: Zap,
-    LOGIC: Code,
-    STYLE: FileWarning,
-  };
+  const icons: Record<string, typeof Shield> = { SECURITY: Shield, PERFORMANCE: Zap, LOGIC: Code, STYLE: FileWarning };
   const Icon = icons[category] ?? FileWarning;
   return (
     <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -301,27 +253,28 @@ function CategoryBadge({ category }: { category: string }) {
 
 function FindingCard({ finding }: { finding: Finding }) {
   const [expanded, setExpanded] = useState(false);
-
   return (
-    <div className="border border-border/60 rounded-lg overflow-hidden">
+    <div className="rounded-xl border border-border/50 bg-card overflow-hidden transition-all hover:shadow-md hover:shadow-foreground/[0.02]">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full cursor-pointer flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+        className="w-full cursor-pointer flex items-start gap-3 px-5 py-4 text-left hover:bg-muted/20 transition-colors"
       >
-        <SeverityBadge severity={finding.severity} />
+        <div className="mt-0.5">
+          <SeverityBadge severity={finding.severity} />
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium leading-snug truncate">
+          <p className="text-sm font-medium leading-snug">
             {finding.description}
           </p>
-          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="font-mono">{finding.filePath}:{finding.lineNumber}</span>
+          <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="font-mono bg-muted/50 rounded-md px-1.5 py-0.5">{finding.filePath}:{finding.lineNumber}</span>
             <CategoryBadge category={finding.category} />
           </div>
         </div>
         {expanded ? (
-          <ChevronUp className="size-4 shrink-0 mt-0.5 text-muted-foreground" />
+          <ChevronUp className="size-4 shrink-0 mt-1 text-muted-foreground" />
         ) : (
-          <ChevronDown className="size-4 shrink-0 mt-0.5 text-muted-foreground" />
+          <ChevronDown className="size-4 shrink-0 mt-1 text-muted-foreground" />
         )}
       </button>
       <AnimatePresence>
@@ -333,11 +286,13 @@ function FindingCard({ finding }: { finding: Finding }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="border-t border-border/60 px-4 py-3 bg-muted/20">
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">
+            <div className="border-t border-border/50 px-5 py-4 bg-muted/10">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
                 Suggested Fix
               </p>
-              <p className="text-sm leading-relaxed">{finding.suggestedFix}</p>
+              <p className="text-sm leading-relaxed text-foreground/80">
+                {finding.suggestedFix}
+              </p>
             </div>
           </motion.div>
         )}
@@ -348,55 +303,73 @@ function FindingCard({ finding }: { finding: Finding }) {
 
 function PipelineStatus({ status }: { status: string }) {
   const stages = [
-    { key: "analyzing", label: "Code_Analyzer", icon: Cpu },
-    { key: "reasoning", label: "Logic_Reasoner", icon: Zap },
-    { key: "auditing", label: "Security_Auditor", icon: Shield },
+    { key: "analyzing", label: "Code_Analyzer", sub: "Mapping codebase", icon: Cpu },
+    { key: "reasoning", label: "Logic_Reasoner", sub: "Reviewing logic", icon: Zap },
+    { key: "auditing", label: "Security_Auditor", sub: "Scanning vulns", icon: Shield },
   ];
-
   const stageOrder = ["pending", "analyzing", "reasoning", "auditing", "completed", "failed"];
   const currentIdx = stageOrder.indexOf(status);
-
   return (
-    <div className="flex items-center gap-2">
+    <div className="space-y-3">
       {stages.map((s, i) => {
         const sIdx = stageOrder.indexOf(s.key);
         const isActive = status === s.key;
         const isDone = currentIdx > sIdx;
         return (
-          <div key={s.key} className="flex items-center gap-2">
-            {i > 0 && (
-              <div
-                className={`w-6 h-px ${
-                  isDone || isActive ? "bg-foreground" : "bg-border"
-                }`}
-              />
-            )}
-            <div
-              className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
-                isActive
-                  ? "border-foreground bg-foreground text-background"
-                  : isDone
-                    ? "border-foreground/30 text-foreground"
-                    : "border-border text-muted-foreground"
-              }`}
-            >
+          <motion.div
+            key={s.key}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
+              isActive
+                ? "border-accent-slate/30 bg-accent-slate/[0.04] shadow-sm"
+                : isDone
+                  ? "border-border/50 bg-card"
+                  : "border-border/30 bg-muted/20 opacity-50"
+            }`}
+          >
+            <div className={`flex size-8 items-center justify-center rounded-lg ${
+              isActive
+                ? "bg-accent-slate/10 text-accent-slate"
+                : isDone
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-muted text-muted-foreground"
+            }`}>
               {isActive ? (
-                <Loader2 className="size-3 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : isDone ? (
-                <CheckCircle2 className="size-3" />
+                <CheckCircle2 className="size-4" />
               ) : (
-                <s.icon className="size-3" />
+                <s.icon className="size-4" />
               )}
-              <span className="hidden sm:inline">{s.label}</span>
             </div>
-          </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium ${isActive ? "text-foreground" : isDone ? "text-foreground" : "text-muted-foreground"}`}>
+                {s.label}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isDone ? "Completed" : isActive ? s.sub : "Waiting"}
+              </p>
+            </div>
+            {isActive && (
+              <div className="flex gap-0.5">
+                {[0, 1, 2].map((d) => (
+                  <motion.div
+                    key={d}
+                    className="size-1 rounded-full bg-accent-slate"
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.2, repeat: Infinity, delay: d * 0.2 }}
+                  />
+                ))}
+              </div>
+            )}
+          </motion.div>
         );
       })}
     </div>
   );
 }
-
-// --- Main Dashboard ---
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -405,19 +378,17 @@ export default function Dashboard() {
   const updateStatus = useMutation(api.reviews.updateStatus);
   const completeReview = useMutation(api.reviews.complete);
   const addFinding = useMutation(api.reviews.addFinding);
-
   const reviews = useQuery(api.reviews.listByUser) ?? [];
-
   const [repoUrl, setRepoUrl] = useState("");
   const [isRunning, setIsRunning] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState<"pending" | "analyzing" | "reasoning" | "auditing" | "completed" | "failed" | "">("");
+  const [currentStatus, setCurrentStatus] = useState<ReviewStatus | "">("");
   const [selectedReview, setSelectedReview] = useState<Id<"reviews"> | null>(null);
   const selectedReviewData = useQuery(
     api.reviews.get,
     selectedReview ? { reviewId: selectedReview } : "skip",
   );
-  const [filterSeverity, setFilterSeverity] = useState<string>("all");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterSeverity, setFilterSeverity] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -429,14 +400,7 @@ export default function Dashboard() {
     setIsRunning(true);
     setCurrentStatus("pending");
     try {
-      await runSimulatedReview(
-        createReview,
-        updateStatus,
-        completeReview,
-        addFinding,
-        repoUrl.trim(),
-        setCurrentStatus,
-      );
+      await runSimulatedReview(createReview, updateStatus, completeReview, addFinding, repoUrl.trim(), setCurrentStatus);
       setRepoUrl("");
     } catch (err) {
       console.error("Review failed:", err);
@@ -458,35 +422,32 @@ export default function Dashboard() {
     return true;
   });
 
-  const severityCounts = findings.reduce(
-    (acc, f) => {
-      acc[f.severity] = (acc[f.severity] ?? 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  const severityCounts = findings.reduce((acc, f) => {
+    acc[f.severity] = (acc[f.severity] ?? 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Top bar */}
-      <nav className="border-b border-border/60">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-7 items-center justify-center rounded-md bg-foreground">
-              <GitBranch className="size-3.5 text-background" strokeWidth={2.5} />
+      <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-8 items-center justify-center rounded-xl bg-foreground shadow-sm">
+              <GitBranch className="size-4 text-background" strokeWidth={2.5} />
             </div>
-            <span className="text-sm font-semibold tracking-tight">
+            <span className="text-[15px] font-semibold tracking-tight">
               Auditflow
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-muted-foreground hidden sm:inline">
+            <span className="text-xs text-muted-foreground hidden sm:inline bg-muted/50 rounded-lg px-3 py-1.5">
               {user?.name ?? user?.email ?? "User"}
             </span>
             <Button
               variant="ghost"
               size="sm"
-              className="cursor-pointer gap-1.5 text-xs text-muted-foreground"
+              className="cursor-pointer gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               onClick={handleSignOut}
             >
               <LogOut className="size-3.5" />
@@ -496,31 +457,34 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-5xl px-6 py-10">
+      <main className="mx-auto max-w-6xl px-6 py-10">
         {selectedReview && selectedReviewData ? (
-          /* --- Review Detail View --- */
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <button
               onClick={() => setSelectedReview(null)}
-              className="cursor-pointer flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-6"
+              className="cursor-pointer flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-6 group"
             >
-              <ArrowLeft className="size-3.5" />
+              <ArrowLeft className="size-3.5 transition-transform group-hover:-translate-x-0.5" />
               Back to reviews
             </button>
 
             {/* Review header */}
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
               <div className="min-w-0">
-                <p className="text-xs font-mono text-muted-foreground truncate mb-1">
+                <p className="text-xs font-mono text-muted-foreground bg-muted/50 rounded-lg px-2 py-1 inline-block mb-3 truncate max-w-full">
                   {selectedReviewData.repoUrl}
                 </p>
-                <h2 className="text-xl font-bold tracking-tight">
+                <h2 className="text-2xl font-bold tracking-[-0.02em]">
                   Review Report
                 </h2>
                 {selectedReviewData.reviewSummary && (
-                  <div className="mt-2">
+                  <div className="mt-3 flex items-center gap-3">
                     <StatusBadge status={selectedReviewData.reviewSummary.status} />
-                    <span className="ml-2 text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {Math.round(selectedReviewData.reviewSummary.confidenceScore * 100)}% confidence
                     </span>
                   </div>
@@ -531,58 +495,41 @@ export default function Dashboard() {
             {/* Metadata cards */}
             {selectedReviewData.executionMetadata && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                <div className="rounded-lg border border-border/60 px-4 py-3">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                    Tokens
-                  </p>
-                  <p className="text-lg font-bold font-mono">
-                    {selectedReviewData.executionMetadata.tokensConsumed.toLocaleString()}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border/60 px-4 py-3">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                    Latency
-                  </p>
-                  <p className="text-lg font-bold font-mono">
-                    {(selectedReviewData.executionMetadata.latencyMs / 1000).toFixed(1)}s
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border/60 px-4 py-3">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                    Agents
-                  </p>
-                  <p className="text-lg font-bold font-mono">
-                    {selectedReviewData.executionMetadata.agentsInvoked.length}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border/60 px-4 py-3">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                    Cache
-                  </p>
-                  <p className="text-lg font-bold font-mono">
-                    {selectedReviewData.executionMetadata.cacheHit ? "Hit" : "Miss"}
-                  </p>
-                </div>
+                {[
+                  { label: "Tokens", value: selectedReviewData.executionMetadata.tokensConsumed.toLocaleString() },
+                  { label: "Latency", value: `${(selectedReviewData.executionMetadata.latencyMs / 1000).toFixed(1)}s` },
+                  { label: "Agents", value: String(selectedReviewData.executionMetadata.agentsInvoked.length) },
+                  { label: "Cache", value: selectedReviewData.executionMetadata.cacheHit ? "Hit" : "Miss" },
+                ].map((m) => (
+                  <div key={m.label} className="rounded-xl border border-border/50 bg-card px-4 py-4 hover:shadow-md hover:shadow-foreground/[0.02] transition-all">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
+                      {m.label}
+                    </p>
+                    <p className="text-xl font-bold font-mono tracking-tight">
+                      {m.value}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
 
             {/* Deterministic metrics */}
             {selectedReviewData.deterministicMetrics && (
-              <div className="rounded-lg border border-border/60 px-5 py-4 mb-8">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">
+              <div className="rounded-xl border border-border/50 bg-card px-5 py-5 mb-8">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
                   Deterministic Metrics
                 </p>
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-2 gap-5">
                   <div>
-                    <p className="text-xs font-medium">Cyclomatic Complexity Delta</p>
-                    <p className="text-sm font-mono mt-0.5 text-muted-foreground">
+                    <p className="text-xs font-medium mb-1">Cyclomatic Complexity Delta</p>
+                    <p className="text-lg font-bold font-mono">
                       {selectedReviewData.deterministicMetrics.cyclomaticComplexityDelta > 0 ? "+" : ""}
                       {selectedReviewData.deterministicMetrics.cyclomaticComplexityDelta}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium">Test Coverage Impact</p>
-                    <p className="text-sm mt-0.5 text-muted-foreground">
+                    <p className="text-xs font-medium mb-1">Test Coverage Impact</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       {selectedReviewData.deterministicMetrics.testCoverageImpact}
                     </p>
                   </div>
@@ -590,18 +537,19 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Findings */}
-            <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold">
-                  Findings ({filteredFindings.length})
-                </h3>
-              </div>
+            {/* Findings header + filters */}
+            <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h3 className="text-base font-semibold tracking-tight">
+                Findings
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({filteredFindings.length})
+                </span>
+              </h3>
               <div className="flex items-center gap-2">
                 <select
                   value={filterSeverity}
                   onChange={(e) => setFilterSeverity(e.target.value)}
-                  className="cursor-pointer rounded-md border border-border/60 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                  className="cursor-pointer rounded-lg border border-border/50 bg-card px-3 py-1.5 text-xs font-medium text-foreground outline-none focus:ring-2 focus:ring-ring/20"
                 >
                   <option value="all">All Severity</option>
                   <option value="CRITICAL">Critical</option>
@@ -612,7 +560,7 @@ export default function Dashboard() {
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="cursor-pointer rounded-md border border-border/60 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground outline-none focus:ring-1 focus:ring-ring"
+                  className="cursor-pointer rounded-lg border border-border/50 bg-card px-3 py-1.5 text-xs font-medium text-foreground outline-none focus:ring-2 focus:ring-ring/20"
                 >
                   <option value="all">All Category</option>
                   <option value="SECURITY">Security</option>
@@ -623,75 +571,88 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Severity summary */}
             {findings.length > 0 && (
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-5">
                 {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((s) =>
                   severityCounts[s] ? (
-                    <span key={s} className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span key={s} className="flex items-center gap-1.5 text-xs">
                       <SeverityBadge severity={s} />
-                      {severityCounts[s]}
+                      <span className="text-muted-foreground font-mono">{severityCounts[s]}</span>
                     </span>
                   ) : null,
                 )}
               </div>
             )}
 
+            {/* Findings list */}
             <div className="flex flex-col gap-2">
               {filteredFindings.length === 0 && findings.length > 0 && (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  No findings match the current filters.
-                </p>
+                <div className="text-center py-12 rounded-xl border border-border/30 bg-muted/20">
+                  <p className="text-sm text-muted-foreground">
+                    No findings match the current filters.
+                  </p>
+                </div>
               )}
               {filteredFindings.map((f) => (
                 <FindingCard key={f._id} finding={f} />
               ))}
               {findings.length === 0 && (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  No findings recorded for this review.
-                </p>
+                <div className="text-center py-16 rounded-xl border border-border/30 bg-muted/20">
+                  <div className="inline-flex items-center justify-center size-12 rounded-2xl bg-muted mb-4">
+                    <Shield className="size-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    No findings recorded for this review.
+                  </p>
+                </div>
               )}
             </div>
-          </div>
+          </motion.div>
         ) : (
-          /* --- Review List / Input View --- */
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight mb-1">
-              Reviews
-            </h1>
-            <p className="text-sm text-muted-foreground mb-8">
-              Enter a repository URL to run a multi-agent code audit.
-            </p>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold tracking-[-0.02em] mb-1">
+                Reviews
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Enter a repository URL to run a multi-agent code audit.
+              </p>
+            </div>
 
             {/* Input section */}
-            <div className="rounded-lg border border-border/60 p-5 mb-10">
-              <label
-                htmlFor="repo-url"
-                className="block text-xs font-medium text-muted-foreground mb-2"
-              >
+            <div className="rounded-2xl border border-border/50 bg-card p-6 mb-10 shadow-sm">
+              <label htmlFor="repo-url" className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
                 Repository URL
               </label>
-              <div className="flex gap-2">
-                <Input
-                  ref={inputRef}
-                  id="repo-url"
-                  placeholder="https://github.com/owner/repo"
-                  value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleReview();
-                  }}
-                  disabled={isRunning}
-                  className="flex-1 font-mono text-sm"
-                />
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <GitBranch className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
+                  <Input
+                    ref={inputRef}
+                    id="repo-url"
+                    placeholder="https://github.com/owner/repo"
+                    value={repoUrl}
+                    onChange={(e) => setRepoUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleReview(); }}
+                    disabled={isRunning}
+                    className="pl-10 font-mono text-sm rounded-xl h-11"
+                  />
+                </div>
                 <Button
                   onClick={handleReview}
                   disabled={!repoUrl.trim() || isRunning}
-                  className="cursor-pointer gap-2 shrink-0"
+                  className="cursor-pointer gap-2 shrink-0 rounded-xl h-11 px-6 font-medium"
                 >
                   {isRunning ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      <span className="hidden sm:inline">Reviewing…</span>
+                      <span className="hidden sm:inline">Reviewing...</span>
                     </>
                   ) : (
                     <>
@@ -711,7 +672,10 @@ export default function Dashboard() {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-4 pt-4 border-t border-border/60">
+                    <div className="mt-5 pt-5 border-t border-border/50">
+                      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                        Pipeline Progress
+                      </p>
                       <PipelineStatus status={currentStatus} />
                     </div>
                   </motion.div>
@@ -722,7 +686,7 @@ export default function Dashboard() {
             {/* Review history */}
             {reviews.length > 0 && (
               <div>
-                <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
                   History
                 </h2>
                 <div className="flex flex-col gap-2">
@@ -730,25 +694,19 @@ export default function Dashboard() {
                     <button
                       key={review._id}
                       onClick={() => setSelectedReview(review._id)}
-                      className="cursor-pointer w-full text-left rounded-lg border border-border/60 px-4 py-3 hover:bg-muted/30 transition-colors"
+                      className="cursor-pointer w-full text-left rounded-xl border border-border/50 bg-card px-5 py-4 hover:shadow-md hover:shadow-foreground/[0.02] hover:border-border/80 transition-all"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium font-mono truncate">
                             {review.repoUrl}
                           </p>
-                          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                          <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="size-3" />
-                              {new Date(review.createdAt).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )}
+                              {new Date(review.createdAt).toLocaleDateString(undefined, {
+                                month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                              })}
                             </span>
                             {review.executionMetadata && (
                               <span className="flex items-center gap-1">
@@ -764,7 +722,7 @@ export default function Dashboard() {
                           ) : review.status === "failed" ? (
                             <StatusBadge status="CRITICAL_BLOCKER" />
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
                               <Loader2 className="size-3 animate-spin" />
                               {review.status}
                             </span>
@@ -777,17 +735,19 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* Empty state */}
             {reviews.length === 0 && !isRunning && (
-              <div className="text-center py-16">
-                <div className="inline-flex items-center justify-center size-12 rounded-full bg-muted mb-4">
-                  <GitBranch className="size-5 text-muted-foreground" />
+              <div className="text-center py-20">
+                <div className="inline-flex items-center justify-center size-16 rounded-2xl bg-muted/50 mb-5">
+                  <GitBranch className="size-7 text-muted-foreground/50" />
                 </div>
+                <p className="text-base font-medium mb-1">No reviews yet</p>
                 <p className="text-sm text-muted-foreground">
-                  No reviews yet. Enter a repository URL above to get started.
+                  Enter a repository URL above to get started.
                 </p>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
       </main>
     </div>

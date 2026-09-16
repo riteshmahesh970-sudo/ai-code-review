@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/input-otp";
 
 import { useAuth } from "@/hooks/use-auth";
-import { GitBranch, ArrowRight, Loader2, Mail, UserX } from "lucide-react";
+import { GitBranch, ArrowRight, Loader2, Mail, UserX, Sparkles } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -23,10 +23,7 @@ interface AuthProps {
   redirectAfterAuth?: string;
 }
 
-function resolveRedirectAfterAuth(
-  returnTo: string | null,
-  fallback = "/dashboard",
-) {
+function resolveRedirectAfterAuth(returnTo: string | null, fallback = "/dashboard") {
   if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
     return returnTo;
   }
@@ -37,10 +34,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = resolveRedirectAfterAuth(
-    searchParams.get("returnTo"),
-    redirectAfterAuth,
-  );
+  const redirect = resolveRedirectAfterAuth(searchParams.get("returnTo"), redirectAfterAuth);
   const [step, setStep] = useState<"signIn" | { email: string }>("signIn");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -51,6 +45,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       navigate(redirect);
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
+
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
@@ -62,11 +57,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       setIsLoading(false);
     } catch (error) {
       console.error("Email sign-in error:", error);
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to send verification code. Please try again.",
-      );
+      setError(error instanceof Error ? error.message : "Failed to send verification code. Please try again.");
       setIsLoading(false);
     }
   };
@@ -95,26 +86,29 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       navigate(redirect);
     } catch (error) {
       console.error("Guest login error:", error);
-      setError(
-        `Failed to sign in as guest: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      setError(`Failed to sign in as guest: ${error instanceof Error ? error.message : "Unknown error"}`);
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
+      {/* Decorative background */}
+      <div className="absolute inset-0 dot-grid opacity-30" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-accent-slate/[0.05] to-transparent rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-accent-slate/[0.04] to-transparent rounded-full blur-3xl" />
+
       {/* Nav */}
-      <nav className="border-b border-border/60">
-        <div className="mx-auto flex max-w-5xl items-center px-6 py-5">
+      <nav className="relative z-10 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center px-6 py-4">
           <button
             onClick={() => navigate("/")}
-            className="cursor-pointer flex items-center gap-2.5"
+            className="cursor-pointer flex items-center gap-3"
           >
-            <div className="flex size-8 items-center justify-center rounded-md bg-foreground">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-foreground shadow-sm">
               <GitBranch className="size-4 text-background" strokeWidth={2.5} />
             </div>
-            <span className="text-sm font-semibold tracking-tight">
+            <span className="text-[15px] font-semibold tracking-tight">
               Auditflow
             </span>
           </button>
@@ -122,28 +116,31 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       </nav>
 
       {/* Auth Content */}
-      <div className="flex-1 flex items-center justify-center px-6">
-        <Card className="w-full max-w-[380px] border-border/60 shadow-none">
+      <div className="relative z-10 flex-1 flex items-center justify-center px-6 py-12">
+        <Card className="w-full max-w-[400px] border-border/50 shadow-xl shadow-foreground/[0.04] rounded-2xl overflow-hidden">
           {step === "signIn" ? (
             <>
-              <CardHeader className="text-center">
-                <CardTitle className="text-lg font-bold tracking-tight">
-                  Sign in
+              <CardHeader className="text-center pt-8 pb-4">
+                <div className="inline-flex items-center justify-center size-12 rounded-2xl bg-muted mx-auto mb-4">
+                  <Sparkles className="size-5 text-accent-slate" />
+                </div>
+                <CardTitle className="text-xl font-bold tracking-tight">
+                  Welcome back
                 </CardTitle>
-                <CardDescription className="text-sm">
-                  Enter your email to continue to the review dashboard.
+                <CardDescription className="text-sm text-muted-foreground">
+                  Sign in to access the review dashboard.
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleEmailSubmit}>
-                <CardContent>
+                <CardContent className="px-6 pb-4">
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                       <Input
                         name="email"
                         placeholder="name@example.com"
                         type="email"
-                        className="pl-9 text-sm"
+                        className="pl-10 text-sm rounded-xl h-11"
                         disabled={isLoading}
                         required
                       />
@@ -153,7 +150,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       variant="outline"
                       size="icon"
                       disabled={isLoading}
-                      className="cursor-pointer shrink-0"
+                      className="cursor-pointer shrink-0 rounded-xl h-11 w-11"
                     >
                       {isLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -163,16 +160,16 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     </Button>
                   </div>
                   {error && (
-                    <p className="mt-2 text-sm text-red-600">{error}</p>
+                    <p className="mt-2.5 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
                   )}
 
-                  <div className="mt-5">
+                  <div className="mt-6">
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-border/60" />
+                        <span className="w-full border-t border-border/50" />
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">
+                        <span className="bg-card px-3 text-muted-foreground tracking-wider">
                           Or
                         </span>
                       </div>
@@ -181,7 +178,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full mt-4 cursor-pointer"
+                      className="w-full mt-4 cursor-pointer rounded-xl h-11"
                       onClick={handleGuestLogin}
                       disabled={isLoading}
                     >
@@ -194,34 +191,32 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </>
           ) : (
             <>
-              <CardHeader className="text-center">
-                <CardTitle className="text-lg font-bold tracking-tight">
+              <CardHeader className="text-center pt-8 pb-4">
+                <div className="inline-flex items-center justify-center size-12 rounded-2xl bg-muted mx-auto mb-4">
+                  <Mail className="size-5 text-accent-slate" />
+                </div>
+                <CardTitle className="text-xl font-bold tracking-tight">
                   Check your email
                 </CardTitle>
-                <CardDescription className="text-sm">
-                  We sent a verification code to {step.email}
+                <CardDescription className="text-sm text-muted-foreground">
+                  We sent a verification code to{" "}
+                  <span className="font-medium text-foreground">{step.email}</span>
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleOtpSubmit}>
-                <CardContent className="pb-4">
+                <CardContent className="px-6 pb-4">
                   <input type="hidden" name="email" value={step.email} />
                   <input type="hidden" name="code" value={otp} />
 
-                  <div className="flex justify-center">
+                  <div className="flex justify-center py-2">
                     <InputOTP
                       value={otp}
                       onChange={setOtp}
                       maxLength={6}
                       disabled={isLoading}
                       onKeyDown={(e) => {
-                        if (
-                          e.key === "Enter" &&
-                          otp.length === 6 &&
-                          !isLoading
-                        ) {
-                          const form = (
-                            e.target as HTMLElement
-                          ).closest("form");
+                        if (e.key === "Enter" && otp.length === 6 && !isLoading) {
+                          const form = (e.target as HTMLElement).closest("form");
                           if (form) form.requestSubmit();
                         }
                       }}
@@ -234,12 +229,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     </InputOTP>
                   </div>
                   {error && (
-                    <p className="mt-2 text-sm text-red-600 text-center">
-                      {error}
-                    </p>
+                    <p className="mt-2.5 text-sm text-red-600 text-center bg-red-50 rounded-lg px-3 py-2">{error}</p>
                   )}
                   <p className="text-sm text-muted-foreground text-center mt-4">
-                    Didn&apos;t receive a code?{" "}
+                    Didn't receive a code?{" "}
                     <Button
                       variant="link"
                       className="p-0 h-auto cursor-pointer"
@@ -249,10 +242,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     </Button>
                   </p>
                 </CardContent>
-                <CardFooter className="flex-col gap-2">
+                <CardFooter className="flex-col gap-2 px-6 pb-6">
                   <Button
                     type="submit"
-                    className="w-full cursor-pointer"
+                    className="w-full cursor-pointer rounded-xl h-11 font-medium"
                     disabled={isLoading || otp.length !== 6}
                   >
                     {isLoading ? (
@@ -272,7 +265,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     variant="ghost"
                     onClick={() => setStep("signIn")}
                     disabled={isLoading}
-                    className="w-full cursor-pointer"
+                    className="w-full cursor-pointer text-muted-foreground"
                   >
                     Use different email
                   </Button>
@@ -281,7 +274,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
             </>
           )}
 
-          <div className="py-3 px-6 text-xs text-center text-muted-foreground bg-muted border-t border-border/60 rounded-b-lg">
+          <div className="py-3 px-6 text-xs text-center text-muted-foreground/60 bg-muted/30 border-t border-border/50">
             Secured by{" "}
             <a
               href="https://freebuff.com"
