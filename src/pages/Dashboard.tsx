@@ -4,6 +4,9 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
 import { InterferenceBg } from "@/components/InterferenceBg";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { AgentTopology } from "@/components/AgentTopology";
+import { CodeDiffViewer } from "@/components/CodeDiffViewer";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -288,12 +291,15 @@ function FindingCard({ finding }: { finding: Finding }) {
             className="overflow-hidden"
           >
             <div className="border-t border-border/50 px-5 py-4 bg-muted/10">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
                 Suggested Fix
               </p>
-              <p className="text-sm leading-relaxed text-foreground/80">
-                {finding.suggestedFix}
-              </p>
+              <CodeDiffViewer
+                oldCode={finding.description}
+                newCode={finding.suggestedFix}
+                filePath={finding.filePath}
+                language="plaintext"
+              />
             </div>
           </motion.div>
         )}
@@ -446,6 +452,7 @@ export default function Dashboard() {
             <span className="text-xs text-muted-foreground hidden sm:inline bg-muted/50 rounded-lg px-3 py-1.5">
               {user?.name ?? user?.email ?? "User"}
             </span>
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"
@@ -737,15 +744,12 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty state with topology */}
             {reviews.length === 0 && !isRunning && (
-              <div className="text-center py-20">
-                <div className="inline-flex items-center justify-center size-16 rounded-2xl bg-muted/50 mb-5">
-                  <GitBranch className="size-7 text-muted-foreground/50" />
-                </div>
-                <p className="text-base font-medium mb-1">No reviews yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Enter a repository URL above to get started.
+              <div className="py-8">
+                <AgentTopology />
+                <p className="text-sm text-muted-foreground text-center mt-6">
+                  Enter a repository URL above to run a multi-agent audit.
                 </p>
               </div>
             )}

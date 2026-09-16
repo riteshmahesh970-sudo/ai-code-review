@@ -16,6 +16,7 @@ import {
 
 import { useAuth } from "@/hooks/use-auth";
 import { GitBranch, ArrowRight, Loader2, Mail, UserX, Sparkles } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -112,6 +113,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
               Auditflow
             </span>
           </button>
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
 

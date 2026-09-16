@@ -2,6 +2,8 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
 import { InterferenceBg } from "@/components/InterferenceBg";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { HeroDemo } from "@/components/HeroDemo";
 import {
   Shield,
   Cpu,
@@ -135,6 +137,7 @@ export default function Landing() {
             >
               How it works
             </a>
+            <ThemeToggle />
             <button
               onClick={handleCta}
               className="cursor-pointer rounded-xl bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-all hover:shadow-lg hover:shadow-foreground/10 hover:scale-[1.02] active:scale-[0.98]"
@@ -237,6 +240,11 @@ export default function Landing() {
             ))}
           </motion.div>
         </motion.div>
+
+        {/* Hero Demo */}
+        <div className="relative mt-16 max-w-4xl mx-auto">
+          <HeroDemo />
+        </div>
       </section>
 
       {/* Divider */}
