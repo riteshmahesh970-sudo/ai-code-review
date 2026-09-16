@@ -154,3 +154,52 @@ html {
 ::selection {
   background: oklch(0.55 0.06 260 / 0.2);
 }
+
+/* Interference pattern animations */
+@keyframes interference-drift {
+  0% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate(-48%, -52%) scale(1.05) rotate(2deg);
+  }
+  100% {
+    transform: translate(-52%, -48%) scale(0.97) rotate(-1.5deg);
+  }
+}
+
+@keyframes interference-drift2 {
+  0% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(-53%, -47%) scale(1.08) rotate(-2deg);
+  }
+  66% {
+    transform: translate(-47%, -53%) scale(0.95) rotate(3deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.02) rotate(1deg);
+  }
+}
+
+@keyframes interference-drift3 {
+  0% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate(-46%, -54%) scale(1.04) rotate(-3deg);
+  }
+  100% {
+    transform: translate(-54%, -46%) scale(0.98) rotate(2deg);
+  }
+}
+
+@keyframes interference-scroll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50px);
+  }
+}

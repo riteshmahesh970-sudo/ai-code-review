@@ -1,6 +1,7 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavigate } from "react-router";
+import { InterferenceBg } from "@/components/InterferenceBg";
 import {
   Shield,
   Cpu,
@@ -114,7 +115,8 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-hidden">
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
+      <InterferenceBg />
       {/* Nav */}
       <nav className="relative z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 lg:px-8 py-4">
