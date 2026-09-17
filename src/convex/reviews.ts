@@ -1,22 +1,30 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+async function requireOwnedReview(ctx: any, reviewId: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+
+  const review = await ctx.db.get(reviewId);
+  if (!review || review.userId !== identity.subject) {
+    throw new Error("Review not found");
+  }
+
+  return review;
+}
+
 export const create = mutation({
-  args: {
-    repoUrl: v.string(),
-  },
+  args: { repoUrl: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    const reviewId = await ctx.db.insert("reviews", {
+    return await ctx.db.insert("reviews", {
       userId: identity.subject,
       repoUrl: args.repoUrl,
       status: "pending",
       createdAt: Date.now(),
     });
-
-    return reviewId;
   },
 });
 
@@ -33,6 +41,7 @@ export const updateStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    await requireOwnedReview(ctx, args.reviewId);
     await ctx.db.patch(args.reviewId, { status: args.status });
   },
 });
@@ -60,6 +69,7 @@ export const complete = mutation({
     }),
   },
   handler: async (ctx, args) => {
+    await requireOwnedReview(ctx, args.reviewId);
     await ctx.db.patch(args.reviewId, {
       status: "completed",
       executionMetadata: args.executionMetadata,
@@ -91,6 +101,7 @@ export const addFinding = mutation({
     suggestedFix: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireOwnedReview(ctx, args.reviewId);
     await ctx.db.insert("findings", {
       reviewId: args.reviewId,
       findingId: args.findingId,
@@ -110,13 +121,11 @@ export const listByUser = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const reviews = await ctx.db
+    return await ctx.db
       .query("reviews")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .order("desc")
       .collect();
-
-    return reviews;
   },
 });
 
@@ -124,7 +133,8 @@ export const get = query({
   args: { reviewId: v.id("reviews") },
   handler: async (ctx, args) => {
     const review = await ctx.db.get(args.reviewId);
-    if (!review) return null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity || !review || review.userId !== identity.subject) return null;
 
     const findings = await ctx.db
       .query("findings")
